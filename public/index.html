@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Chat</title>
+</head>
+<body>
+    <h1>our chat</h1>
+    <input type="text" placeholder="Type here" id="msg">
+    <button id="sndbtn">Send</button>
+
+    <div id="screen"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const msg = document.getElementById('msg');
+        const sndbtn = document.getElementById('sndbtn');
+        const screen = document.getElementById('screen');
+
+        socket.on("msgs",(msg) => {
+            const p = document.createElement("p");
+            p.innerText = msg;
+            screen.appendChild(p);
+        });
+
+        msg.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sndbtn.click();
+        });
+
+        sndbtn.addEventListener('click', (e) => {
+           const msgs = msg.value;
+           console.log(msgs);
+            socket.emit('msg',msgs);
+        });
+    </script>
+</body>
+</html>
