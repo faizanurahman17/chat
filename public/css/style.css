@@ -11,7 +11,7 @@ body{
     padding: 10px;
     width: 100svw;
     height: 100svh;
-    background: linear-gradient(45deg,#000,#000000c1);
+    background: #000;
     flex-direction: column;
 }
 .wrapper{
