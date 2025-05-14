@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Our Chat</title>
+    <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
-    <h1>our chat</h1>
-    <input type="text" placeholder="Type here" id="msg">
-    <button id="sndbtn">Send</button>
+    <section class="wrapper">
+        <h1>Noi<span class="span">C</span>hat</h1>
 
-    <div id="screen"></div>
+        <nav class="inputs">
+            <input type="text" placeholder="Type here" class="msg" id="msg">
+            <button class="btn" id="sndbtn">Send</button>
+        </nav>
+
+        <div class="screen" id="screen"></div>
+    </section>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
