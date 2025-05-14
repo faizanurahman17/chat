@@ -31,6 +31,8 @@
         socket.on("msgs",(msg) => {
             const p = document.createElement("p");
             p.innerText = msg;
+            console.log(msg);
+            
 
             const now = new Date();
             const h = now.getHours().toString().padStart(2, '0');
