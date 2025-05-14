@@ -60,6 +60,7 @@
            const msgs = msg.value;
            console.log(msgs);
             socket.emit('msg',msgs);
+            msg.value = "";
         });
     </script>
 </body>

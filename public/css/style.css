@@ -54,6 +54,7 @@ h1{
     width: 70%;
     padding-left: 10px;
     gap: 10px;
+    outline: none;
 }
 .msg:focus,.btn:hover{
     border: 2.5px #ff0000c2 solid;
