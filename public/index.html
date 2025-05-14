@@ -26,7 +26,10 @@
         });
 
         msg.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') sndbtn.click();
+            if (e.key === 'Enter') {
+                sndbtn.click();
+                msg.value = "";
+            }
         });
 
         sndbtn.addEventListener('click', (e) => {
