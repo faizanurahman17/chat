@@ -11,11 +11,14 @@
         <h1>Noi<span class="span">C</span>hat</h1>
 
         <nav class="inputs">
-            <input type="text" placeholder="Type here" class="msg" id="msg">
+            <textarea type="text" placeholder="Type here" class="msg" id="msg"></textarea>
             <button class="btn" id="sndbtn"><img src="./img/send.svg" alt="Send" height="40px"></button>
         </nav>
 
-        <div class="screen" id="screen"></div>
+        <div class="screen" id="screen">
+            <img src="./img/background.png" class="chat-back">
+            <div class="display-cont" id="display-cont"></div>
+        </div>
     </section>
     <a href="https://www.logicode.site" class="ref">logicode.site</a>
 
@@ -26,6 +29,7 @@
         const msg = document.getElementById('msg');
         const sndbtn = document.getElementById('sndbtn');
         const screen = document.getElementById('screen');
+        const displayCont = document.getElementById('display-cont');
 
 
         socket.on("msgs",(msg) => {
@@ -49,15 +53,15 @@
             }
 
             p.appendChild(span);
-            screen.appendChild(p);
+            displayCont.appendChild(p);
         });
 
-        msg.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                sndbtn.click();
-                msg.value = "";
-            }
-        });
+        // msg.addEventListener('keydown', (e) => {
+        //     if (e.key === 'Enter') {
+        //         sndbtn.click();
+        //         msg.value = "";
+        //     }
+        // });
 
         sndbtn.addEventListener('click', (e) => {
            const msgs = msg.value;
