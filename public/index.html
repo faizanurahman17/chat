@@ -48,12 +48,6 @@
             const { content, sender } = msgObj;
             const p = document.createElement("p");
 
-            if (sender === 'me') {
-                p.style.borderLeft = "2px blue solid";
-            } else {
-                p.style.borderLeft = "2px red solid";
-            }
-
             if (content.startsWith("data:image")) {
                 const img = document.createElement("img");
                 img.src = content;
@@ -77,6 +71,10 @@
             } else {
                 p.style.display = "flex";
             }
+
+            p.style.borderLeftWidth = "2px";
+            p.style.borderLeftStyle = "solid";
+            p.style.borderLeftColor = sender === "me" ? "blue" : "red";
 
             displayCont.appendChild(p);
             p.scrollIntoView({ behavior: "smooth", block: "center" });
