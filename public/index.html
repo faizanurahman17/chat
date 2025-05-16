@@ -83,11 +83,11 @@
         }
 
         socket.on("msgs", (msgObj) => {
-            if (msgObj.sender !== 'me') {
-                msgObj.sender = 'other';
-            }
-            renderMessage(msgObj);
-            saveMessage(msgObj);
+            const isMine = msgObj.sender === 'me';
+            const displaySender = isMine ? 'me' : 'other';
+            const displayMsg = { ...msgObj, sender: displaySender };
+            renderMessage(displayMsg);
+            saveMessage(displayMsg);
         });
 
         const imgInput = document.getElementById('imgInput');
