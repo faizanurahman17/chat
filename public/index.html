@@ -11,7 +11,8 @@
         <h1>Noi<span class="span">C</span>hat</h1>
 
         <nav class="inputs">
-            <textarea type="text" placeholder="Type here" class="msg" id="msg"></textarea>
+            <input type="text" placeholder="Type here / double - click to select image" class="msg" id="msg">
+            <input type="file" id="imgInput" accept="image/*" style="display: none;">
             <button class="btn" id="sndbtn"><img src="./img/send.svg" alt="Send" height="40px"></button>
         </nav>
 
@@ -31,43 +32,99 @@
         const screen = document.getElementById('screen');
         const displayCont = document.getElementById('display-cont');
 
+        // Load messages from localStorage on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedMessages = JSON.parse(localStorage.getItem('chatHistory')) || [];
+            savedMessages.forEach(msgObj => renderMessage(msgObj));
+        });
 
-        socket.on("msgs",(msg) => {
+        function saveMessage(msg) {
+            const current = JSON.parse(localStorage.getItem('chatHistory')) || [];
+            current.push(msg);
+            localStorage.setItem('chatHistory', JSON.stringify(current));
+        }
+
+        function renderMessage(msgObj) {
+            const { content, sender } = msgObj;
             const p = document.createElement("p");
-            p.innerText = msg;
-            console.log(msg);
-            
+
+            if (sender === 'me') {
+                p.style.borderLeft = "2px blue solid";
+            } else {
+                p.style.borderLeft = "2px red solid";
+            }
+
+            if (content.startsWith("data:image")) {
+                const img = document.createElement("img");
+                img.src = content;
+                img.style.maxWidth = "200px";
+                img.style.borderRadius = "10px";
+                p.appendChild(img);
+            } else {
+                p.innerText = content;
+            }
 
             const now = new Date();
             const h = now.getHours().toString().padStart(2, '0');
             const m = now.getMinutes().toString().padStart(2, '0');
-            const s = now.getSeconds().toString().padStart(2, '0');
 
             const span = document.createElement("span");
             span.textContent = `${h}:${m}`;
+            p.appendChild(span);
 
-            if (msg.trim() === "") {
+            if (content.trim() === "") {
                 p.style.display = "none";
             } else {
                 p.style.display = "flex";
             }
 
-            p.appendChild(span);
             displayCont.appendChild(p);
+            p.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        socket.on("msgs", (msgObj) => {
+            if (msgObj.sender !== 'me') {
+                msgObj.sender = 'other';
+            }
+            renderMessage(msgObj);
+            saveMessage(msgObj);
         });
 
-        // msg.addEventListener('keydown', (e) => {
-        //     if (e.key === 'Enter') {
-        //         sndbtn.click();
-        //         msg.value = "";
-        //     }
-        // });
+        const imgInput = document.getElementById('imgInput');
 
-        sndbtn.addEventListener('click', (e) => {
-           const msgs = msg.value;
-           console.log(msgs);
-            socket.emit('msg',msgs);
-            msg.value = "";
+        sndbtn.addEventListener('click', () => {
+            const msgs = msg.value.trim();
+            const file = imgInput.files[0];
+
+            // If there's an image selected
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result;
+                    socket.emit('msg', { content: base64, sender: 'me' });
+                    imgInput.value = ""; // Reset file input
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // If there's a text message
+            if (msgs !== "") {
+                socket.emit('msg', { content: msgs, sender: 'me' });
+                msg.value = "";
+            }
+        });
+
+        // Optional: Double-click on textarea to open file picker
+        msg.addEventListener('dblclick', () => {
+            imgInput.click();
+        });
+
+        msg.addEventListener('keydown', (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sndbtn.click();
+                msg.value = "";
+            }
         });
     </script>
 </body>

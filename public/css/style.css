@@ -19,7 +19,7 @@ body{
     justify-content: space-between;
     /* border: 1px #f7f7f710 solid; */
     width: 90%;
-    height: 70svh;
+    height: 50svh;
     padding: 10px;
     border-radius: .5em;
     backdrop-filter: blur(5px);
@@ -80,17 +80,18 @@ h1{
     width: 100%;
     height: calc(100% - 160px);
     padding: 10px;
-    overflow: scroll;
+    overflow: hidden;
     flex-direction: column;
     gap: 5px;
     /* background-image: url(/public/img/background.png); */
     border-radius: .5em;
 }
-.screen p{
+.display-cont p{
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
+    min-height: 150px;
     font-size: 2rem;
     border-bottom: #f5f5f50f solid 1px;
     color: whitesmoke;
@@ -102,11 +103,11 @@ h1{
     backdrop-filter: blur(10px);
     overflow-x: scroll;
 }
-.screen p:nth-child(odd){
+.display-cont p:nth-child(odd){
     background: #33333363;
 }
 
-.screen p span{
+.display-cont p span{
     color: #ffffff49;
     font-size: .8rem;
     height: 100%;
@@ -126,16 +127,18 @@ h1{
 
 .chat-back{
     background-position: center;
-    background-repeat: repeat-x;
-    background-size: contain;
-    position: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;
+    position: absolute;
     width: calc(100% - 20px);
     height: 600px;
     opacity: .2;
     border-radius: .5rem;
 }
 .display-cont{
+    padding-top: 20px;
     height: 100%;
     width: 100%;
     gap: 10px;
+    overflow: scroll;
 }
