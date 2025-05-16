@@ -49,13 +49,16 @@
             const p = document.createElement("p");
 
             if (content.startsWith("data:image")) {
+                const label = document.createElement("strong");
+                label.textContent = `${sender}: `;
+                p.appendChild(label);
                 const img = document.createElement("img");
                 img.src = content;
                 img.style.maxWidth = "200px";
                 img.style.borderRadius = "10px";
                 p.appendChild(img);
             } else {
-                p.innerText = content;
+                p.innerText = `${sender}: ${content}`;
             }
 
             const now = new Date();
