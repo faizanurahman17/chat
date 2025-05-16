@@ -8,20 +8,22 @@
 </head>
 <body>
     <section class="wrapper">
-        <h1>Noi<span class="span">C</span>hat</h1>
+        <div class="first-cont">
+            <h1>Noi<span class="span">C</span>hat</h1>
 
-        <nav class="inputs">
-            <input type="text" placeholder="Type here / double - click to select image" class="msg" id="msg">
-            <input type="file" id="imgInput" accept="image/*" style="display: none;">
-            <button class="btn" id="sndbtn"><img src="./img/send.svg" alt="Send" height="40px"></button>
-        </nav>
+            <nav class="inputs">
+                <input type="text" placeholder="Type here / double - click to select image then enter" class="msg" id="msg">
+                <input type="file" id="imgInput" accept="image/*" style="display: none;">
+                <button class="btn" id="sndbtn"><img src="./img/send.svg" alt="Send" height="40px"></button>
+            </nav>
+        </div>
 
         <div class="screen" id="screen">
             <img src="./img/background.png" class="chat-back">
             <div class="display-cont" id="display-cont"></div>
         </div>
+        <a href="https://www.logicode.site" class="ref">logicode.site | Home</a>
     </section>
-    <a href="https://www.logicode.site" class="ref">logicode.site</a>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
