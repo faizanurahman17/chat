@@ -49,16 +49,13 @@
             const p = document.createElement("p");
 
             if (content.startsWith("data:image")) {
-                const label = document.createElement("strong");
-                label.textContent = `${sender}: `;
-                p.appendChild(label);
                 const img = document.createElement("img");
                 img.src = content;
                 img.style.maxWidth = "200px";
                 img.style.borderRadius = "10px";
                 p.appendChild(img);
             } else {
-                p.innerText = `${sender}: ${content}`;
+                p.innerText = content;
             }
 
             const now = new Date();
@@ -77,7 +74,7 @@
 
             p.style.borderLeftWidth = "2px";
             p.style.borderLeftStyle = "solid";
-            p.style.borderLeftColor = sender === "me" ? "blue" : "red";
+            p.style.borderLeftColor = sender === "me" ? "red" : "blue";
 
             displayCont.appendChild(p);
             p.scrollIntoView({ behavior: "smooth", block: "center" });
