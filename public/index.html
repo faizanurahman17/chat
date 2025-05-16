@@ -27,6 +27,12 @@
     <script>
         // const socket = io("https://chat-n8s4.onrender.com");
         const socket = io();
+        // Generate or retrieve a unique sender ID for this client
+        const myId = localStorage.getItem('myId') || (() => {
+            const id = crypto.randomUUID();
+            localStorage.setItem('myId', id);
+            return id;
+        })();
         const msg = document.getElementById('msg');
         const sndbtn = document.getElementById('sndbtn');
         const screen = document.getElementById('screen');
@@ -81,7 +87,7 @@
         }
 
         socket.on("msgs", (msgObj) => {
-            const isMine = msgObj.sender === 'me';
+            const isMine = msgObj.senderId === myId;
             const displaySender = isMine ? 'me' : 'other';
             const displayMsg = { ...msgObj, sender: displaySender };
             renderMessage(displayMsg);
@@ -99,7 +105,7 @@
                 const reader = new FileReader();
                 reader.onload = () => {
                     const base64 = reader.result;
-                    socket.emit('msg', { content: base64, sender: 'me' });
+                    socket.emit('msg', { content: base64, senderId: myId });
                     imgInput.value = ""; // Reset file input
                 };
                 reader.readAsDataURL(file);
@@ -107,7 +113,7 @@
 
             // If there's a text message
             if (msgs !== "") {
-                socket.emit('msg', { content: msgs, sender: 'me' });
+                socket.emit('msg', { content: msgs, senderId: myId });
                 msg.value = "";
             }
         });
