@@ -16,6 +16,7 @@
                 <input type="file" id="imgInput" accept="image/*" style="display: none;">
                 <button class="btn" id="sndbtn"><img src="./img/send.svg" alt="Send" height="40px"></button>
             </nav>
+            <h1 class="typeP"></h1>
         </div>
 
         <div class="screen" id="screen">
@@ -117,6 +118,8 @@
             if (msgs !== "") {
                 socket.emit('msg', { content: msgs, senderId: myId });
                 msg.value = "";
+                typeP.classList.remove('typing', 'typing-me', 'typing-other');
+                typeP.textContent = "";
             }
         });
 
@@ -130,6 +133,34 @@
                 e.preventDefault();
                 sndbtn.click();
                 msg.value = "";
+            }
+        });
+
+        msg.addEventListener('input',isTyping);
+        const typeP = document.querySelector('.typeP');
+
+        function isTyping() {
+            if (msg.value !== "") {
+                socket.emit("typing", { senderId: myId });
+                typeP.classList.add('typing', 'typing-me');
+                typeP.classList.remove('typing-other');
+                typeP.textContent = "typing...";
+            } else {
+                typeP.classList.remove('typing', 'typing-me', 'typing-other');
+                typeP.textContent = "";
+            }
+        }
+
+        socket.on("typing", ({ senderId }) => {
+            if (senderId !== myId) {
+                typeP.classList.add('typing', 'typing-other');
+                typeP.classList.remove('typing-me');
+                typeP.textContent = "typing...";
+                clearTimeout(typeP.timer);
+                typeP.timer = setTimeout(() => {
+                    typeP.classList.remove('typing', 'typing-other');
+                    typeP.textContent = "";
+                }, 2000);
             }
         });
     </script>
