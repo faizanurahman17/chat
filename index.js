@@ -11,6 +11,9 @@ io.on('connection', (socket) => {
     socket.on('msg', (msgs) => {
         io.emit("msgs",msgs);
     });
+    socket.on('typing', ({ senderId }) => {
+        socket.broadcast.emit('typing', { senderId });
+    });
 });
 
 app.use(express.static(path.resolve("./public")));
