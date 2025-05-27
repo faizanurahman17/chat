@@ -38,11 +38,26 @@ function renderMessage(msgObj) {
     }
 
     const now = new Date();
-    const h = now.getHours().toString().padStart(2, '0');
+    let h = now.getHours();
     const m = now.getMinutes().toString().padStart(2, '0');
 
+    let isAm = "AM";
+    let hour = h;
+    
+    if (h === 0) {
+        hour = 12;
+        isAm = "AM";
+    } else if (h === 12) {
+        hour = 12;
+        isAm = "PM";
+    } else if (h > 12) {
+        hour = h - 12;
+        isAm = "PM";
+    } else {
+        isAm = "AM";
+    }
     const span = document.createElement("span");
-    span.textContent = `${h}:${m}`;
+    span.textContent = `${hour}:${m} ${isAm}`;
     p.appendChild(span);
 
     if (content.trim() === "") {
