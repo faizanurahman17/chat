@@ -8,11 +8,17 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 io.on('connection', (socket) => {
-    socket.on('msg', (msgs) => {
-        io.emit("msgs",msgs);
+    socket.on('msg', (msgObj) => {
+        io.emit("msgs", msgObj);
     });
     socket.on('typing', ({ senderId }) => {
         socket.broadcast.emit('typing', { senderId });
+    });
+    socket.on('rename', ({ senderId, newName }) => {
+        io.emit('rename', { senderId, newName });
+    });
+
+    socket.on("disconnect", () => {
     });
 });
 

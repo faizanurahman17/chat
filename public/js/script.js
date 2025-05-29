@@ -1,11 +1,26 @@
-// const socket = io("https://chat-n8s4.onrender.com");
 const socket = io();
-// Generate or retrieve a unique sender ID for this client
-const myId = localStorage.getItem('myId') || (() => {
-    const id = crypto.randomUUID();
-    localStorage.setItem('myId', id);
-    return id;
+let myId;
+socket.on("connect", () => {
+    myId = socket.id;
+});
+let lastSender = null;
+const senderMap = {};
+let anonCount = 1;
+const anonColors = {};
+const colorPalette = ["aqua", "green", "orange", "purple", "teal", "magenta", "gold", "navy", "olive", "maroon"];
+
+const myName = localStorage.getItem('myName') || (() => {
+    const rawName = prompt("Enter your name (leave empty to stay anonymous):") || "";
+    const name = rawName.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    localStorage.setItem('myName', name);
+    if (name) {
+        setTimeout(() => {
+            alert(`Welcome, ${name}!`);
+        }, 100);
+    }
+    return name;
 })();
+
 const msg = document.getElementById('msg');
 const sndbtn = document.getElementById('sndbtn');
 const screen = document.getElementById('screen');
@@ -24,38 +39,97 @@ function saveMessage(msg) {
 }
 
 function renderMessage(msgObj) {
-    const { content, sender } = msgObj;
+    const { content, sender, _rawName } = msgObj;
+    if (!senderMap[sender]) {
+        if (_rawName) {
+            senderMap[sender] = _rawName;
+        } else {
+            const label = `Anonymous ${anonCount++}`;
+            senderMap[sender] = label;
+        }
+    }
+    if (!anonColors[sender]) {
+        anonColors[sender] = colorPalette[Object.keys(anonColors).length % colorPalette.length];
+    }
+    const rawName = senderMap[sender];
+    const displayName = sender === myId ? `Me (${rawName})` : rawName;
     const p = document.createElement("p");
+    p.classList.add('p');
 
     if (content.startsWith("data:image")) {
         const img = document.createElement("img");
         img.src = content;
         img.style.maxWidth = "200px";
         img.style.borderRadius = "10px";
+        p.innerText = "";
         p.appendChild(img);
     } else {
         p.innerText = content;
     }
 
-    const now = new Date();
-    let h = now.getHours();
-    const m = now.getMinutes().toString().padStart(2, '0');
+    if (sender !== lastSender) {
+        const senderP = document.createElement("p");
+        const avatar = document.createElement("span");
 
+        const initials = rawName?.charAt(0).toUpperCase() || "?";
+        const avatarColor = sender === myId ? "brown" : anonColors[sender] || "aqua";
+
+        avatar.textContent = initials;
+        avatar.classList.add('avatar');
+        avatar.style.display = "flex";
+        avatar.style.justifyContent = "center";
+        avatar.style.alignItems = "center";
+        avatar.style.width = "28px";
+        avatar.style.height = "28px";
+        avatar.style.borderRadius = "50%";
+        avatar.style.backgroundColor = avatarColor;
+        avatar.style.fontWeight = "bold";
+        avatar.style.fontSize = "1rem";
+        avatar.style.textAlign = "center";
+        avatar.style.lineHeight = "28px";
+        avatar.style.overflow = "hidden";
+
+        if (avatarColor == "aqua") {
+            avatar.style.color = "#000";
+        } else {
+            avatar.style.color = "#fff";
+        }
+
+        senderP.appendChild(avatar);
+        senderP.append(` ${displayName}`);
+        senderP.classList.add('sP');
+        senderP.style.color = avatarColor;
+        senderP.dataset.senderId = sender;
+        if (sender === myId) {
+            senderP.addEventListener("dblclick", () => {
+                const newName = prompt("Enter new name:", rawName);
+                if (newName && newName.trim()) {
+                    const formattedName = newName.trim().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+                    socket.emit("rename", { senderId: sender, newName: formattedName });
+                    localStorage.setItem('myName', formattedName);
+                }
+            });
+        }
+        displayCont.appendChild(senderP);
+        lastSender = sender;
+    }
+
+    const messageTime = new Date(msgObj.timestamp || Date.now());
+
+    let h = messageTime.getHours();
+    const m = messageTime.getMinutes().toString().padStart(2, '0');
     let isAm = "AM";
     let hour = h;
-    
+
     if (h === 0) {
         hour = 12;
-        isAm = "AM";
     } else if (h === 12) {
-        hour = 12;
         isAm = "PM";
     } else if (h > 12) {
         hour = h - 12;
         isAm = "PM";
-    } else {
-        isAm = "AM";
     }
+
     const span = document.createElement("span");
     span.textContent = `${hour}:${m} ${isAm}`;
     p.appendChild(span);
@@ -68,16 +142,20 @@ function renderMessage(msgObj) {
 
     p.style.borderLeftWidth = "2px";
     p.style.borderLeftStyle = "solid";
-    p.style.borderLeftColor = sender === "me" ? "red" : "blue";
+    p.style.borderLeftColor = sender === myId ? "brown" : anonColors[sender] || "aqua";
 
     displayCont.appendChild(p);
     p.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
+
 socket.on("msgs", (msgObj) => {
-    const isMine = msgObj.senderId === myId;
-    const displaySender = isMine ? 'me' : 'other';
-    const displayMsg = { ...msgObj, sender: displaySender };
+    const { senderId, senderName } = msgObj;
+    const displayMsg = {
+        ...msgObj,
+        sender: senderId,
+        _rawName: senderName || null
+    };
     renderMessage(displayMsg);
     saveMessage(displayMsg);
 });
@@ -93,7 +171,8 @@ sndbtn.addEventListener('click', () => {
         const reader = new FileReader();
         reader.onload = () => {
             const base64 = reader.result;
-            socket.emit('msg', { content: base64, senderId: myId });
+            const timestamp = Date.now();
+            socket.emit('msg', { content: base64, senderId: myId, senderName: myName, timestamp });
             imgInput.value = ""; // Reset file input
         };
         reader.readAsDataURL(file);
@@ -101,7 +180,8 @@ sndbtn.addEventListener('click', () => {
 
     // If there's a text message
     if (msgs !== "") {
-        socket.emit('msg', { content: msgs, senderId: myId });
+        const timestamp = Date.now();
+        socket.emit('msg', { content: msgs, senderId: myId, senderName: myName, timestamp });
         msg.value = "";
         typeP.classList.remove('typing', 'typing-me', 'typing-other');
         typeP.textContent = "";
@@ -148,3 +228,15 @@ socket.on("typing", ({ senderId }) => {
         }, 2000);
     }
 });
+
+socket.on("rename", ({ senderId, newName }) => {
+    senderMap[senderId] = newName;
+    // Update displayed names in the DOM
+    document.querySelectorAll(`[data-sender-id="${senderId}"]`).forEach(el => {
+        const isMine = senderId === myId;
+        el.textContent = isMine ? `Me (${newName})` : newName;
+        el.style.color = isMine ? "brown" : anonColors[senderId] || "aqua";
+    });
+});
+
+// setInterval(() => location.reload(), 5000);
