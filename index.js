@@ -6,8 +6,12 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const users = new Set();
 
 io.on('connection', (socket) => {
+    users.add(socket.id);
+    io.emit("online", Array.from(users));
+
     socket.on('msg', (msgObj) => {
         io.emit("msgs", msgObj);
     });
@@ -18,7 +22,14 @@ io.on('connection', (socket) => {
         io.emit('rename', { senderId, newName });
     });
 
+    socket.on("join", (id) => {
+        users.add(id);
+        io.emit("online", Array.from(users));
+    });
+
     socket.on("disconnect", () => {
+        users.delete(socket.id);
+        io.emit("online", Array.from(users));
     });
 });
 

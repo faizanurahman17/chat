@@ -1,13 +1,16 @@
+// const socket = io("https://chat-n8s4.onrender.com");
 const socket = io();
-let myId;
-socket.on("connect", () => {
-    myId = socket.id;
-});
 let lastSender = null;
 const senderMap = {};
 let anonCount = 1;
 const anonColors = {};
 const colorPalette = ["aqua", "green", "orange", "purple", "teal", "magenta", "gold", "navy", "olive", "maroon"];
+// Generate or retrieve a unique sender ID for this client
+const myId = localStorage.getItem('myId') || (() => {
+    const id = crypto.randomUUID();
+    localStorage.setItem('myId', id);
+    return id;
+})();
 
 const myName = localStorage.getItem('myName') || (() => {
     const rawName = prompt("Enter your name (leave empty to stay anonymous):") || "";
@@ -147,7 +150,6 @@ function renderMessage(msgObj) {
     displayCont.appendChild(p);
     p.scrollIntoView({ behavior: "smooth", block: "center" });
 }
-
 
 socket.on("msgs", (msgObj) => {
     const { senderId, senderName } = msgObj;
