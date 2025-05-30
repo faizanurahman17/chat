@@ -48,6 +48,15 @@
         const sndbtn = document.getElementById("sndbtn");
         const roomLabel = document.getElementById("roomLabel");
         const imgInput = document.getElementById("imgInput");
+        const ref = document.querySelector('.ref');
+
+        ref.addEventListener('click', (e) => {
+            e.preventDefault();
+            const leave = confirm(`Leaving this private room will delete the chats\n\nROOM: ${roomId}`);
+            if (leave) {
+                window.location.href = "index.html";
+            }
+        });
 
         roomLabel.textContent = `(Room: ${roomId})`;
         socket.emit("joinPrivateRoom", { roomId });
