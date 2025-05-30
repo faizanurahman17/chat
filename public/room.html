@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoiChat | Private Room</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <style>
+        #roomLabel{
+            font-size: .8rem;
+            font-weight: 100;
+            font-family: 'Courier New', Courier, monospace;
+            color: white;
+        }
+        .prvt{
+            margin-left: 10px;
+            font-size: .8rem;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <section class="wrapper">
+        <div class="first-cont">
+            <h1>Noi<span class="span">C</span>hat<span class="prvt">Private</span></h1>
+            <h6><span id="roomLabel"></span></h6>
+            <nav class="inputs">
+                <input type="text" placeholder="Type your message" class="msg" id="msg">
+                <input type="file" id="imgInput" accept="image/*" style="display: none;">
+                <button class="btn" id="sndbtn"><img src="./img/send.svg" alt="Send" height="40px"></button>
+            </nav>
+        </div>
+        <div class="screen">
+            <img src="./img/background.png" class="chat-back">
+            <div class="display-cont" id="display-cont"></div>
+        </div>
+        <a href="index.html" class="ref">← Back to Public Chat</a>
+    </section>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const params = new URLSearchParams(window.location.search);
+        const roomId = params.get('roomId');
+
+        const displayCont = document.getElementById("display-cont");
+        const msg = document.getElementById("msg");
+        const sndbtn = document.getElementById("sndbtn");
+        const roomLabel = document.getElementById("roomLabel");
+        const imgInput = document.getElementById("imgInput");
+
+        roomLabel.textContent = `(Room: ${roomId})`;
+        socket.emit("joinPrivateRoom", { roomId });
+
+        sndbtn.addEventListener("click", () => {
+            const text = msg.value.trim();
+            const file = imgInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result;
+                    const timestamp = Date.now();
+                    socket.emit("privateMsg", {
+                        roomId,
+                        msgObj: { content: base64, senderId: socket.id, senderName: localStorage.getItem('myName'), timestamp }
+                    });
+                    imgInput.value = "";
+                };
+                reader.readAsDataURL(file);
+            }
+
+            if (text !== "") {
+                const timestamp = Date.now();
+                socket.emit("privateMsg", {
+                    roomId,
+                    msgObj: { content: text, senderId: socket.id, senderName: localStorage.getItem('myName'), timestamp }
+                });
+                msg.value = "";
+            }
+        });
+
+        socket.on("privateMsg", (msgObj) => {
+            const senderName = msgObj.senderName || "Anonymous";
+            const senderP = document.createElement("p");
+            senderP.textContent = senderName;
+            senderP.style.color = msgObj.senderId === socket.id ? "brown" : "teal";
+            senderP.style.fontWeight = "bold";
+            senderP.style.marginBottom = "0.2rem";
+            displayCont.appendChild(senderP);
+
+            const p = document.createElement("p");
+            if (msgObj.content.startsWith("data:image")) {
+                const img = document.createElement("img");
+                img.src = msgObj.content;
+                img.style.maxWidth = "200px";
+                img.style.borderRadius = "10px";
+                p.appendChild(img);
+            } else {
+                p.textContent = msgObj.content;
+            }
+            p.classList.add("p");
+            displayCont.appendChild(p);
+            p.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+
+        msg.addEventListener('dblclick', () => {
+            imgInput.click();
+        });
+
+        msg.addEventListener('keydown', (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sndbtn.click();
+            }
+        });
+
+        socket.on("privateInvite", ({ roomId, fromName }) => {
+            const accept = confirm(`Do you want to chat privately with ${fromName}?`);
+            if (accept) {
+                window.location.href = `room.html?roomId=${roomId}`;
+            }
+        });
+    </script>
+</body>
+</html>

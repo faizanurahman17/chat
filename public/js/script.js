@@ -5,6 +5,8 @@ const senderMap = {};
 let anonCount = 1;
 const anonColors = {};
 const colorPalette = ["aqua", "green", "orange", "purple", "teal", "magenta", "gold", "navy", "olive", "maroon"];
+let isPrivateMode = false;
+let currentRoomId = null;
 // Generate or retrieve a unique sender ID for this client
 const myId = localStorage.getItem('myId') || (() => {
     const id = crypto.randomUUID();
@@ -29,10 +31,36 @@ const sndbtn = document.getElementById('sndbtn');
 const screen = document.getElementById('screen');
 const displayCont = document.getElementById('display-cont');
 
+const modeHeader = document.createElement("div");
+modeHeader.id = "chat-mode-header";
+modeHeader.style.textAlign = "center";
+modeHeader.style.padding = "0.5rem";
+modeHeader.style.fontWeight = "bold";
+modeHeader.style.color = "white";
+modeHeader.style.backgroundColor = "#444";
+modeHeader.style.display = "none";
+
+const backBtn = document.createElement("button");
+backBtn.textContent = "Back to Public Chat";
+backBtn.style.marginLeft = "10px";
+backBtn.style.padding = "0.2rem 0.5rem";
+backBtn.style.cursor = "pointer";
+backBtn.addEventListener("click", () => {
+    isPrivateMode = false;
+    currentRoomId = null;
+    modeHeader.style.display = "none";
+    displayCont.innerHTML = "";
+    socket.emit("join", myId); // reloads public context
+    location.reload(); // or reload manually from localStorage/cache
+});
+
+modeHeader.appendChild(backBtn);
+document.body.insertBefore(modeHeader, document.body.firstChild);
+
 // Load messages from localStorage on page load
 window.addEventListener('DOMContentLoaded', () => {
-    const savedMessages = JSON.parse(localStorage.getItem('chatHistory')) || [];
-    savedMessages.forEach(msgObj => renderMessage(msgObj));
+    // const savedMessages = JSON.parse(localStorage.getItem('chatHistory')) || [];
+    // savedMessages.forEach(msgObj => renderMessage(msgObj));
 });
 
 function saveMessage(msg) {
@@ -42,6 +70,8 @@ function saveMessage(msg) {
 }
 
 function renderMessage(msgObj) {
+    if (isPrivateMode && msgObj.roomId && msgObj.roomId !== currentRoomId) return;
+
     const { content, sender, _rawName } = msgObj;
     if (!senderMap[sender]) {
         if (_rawName) {
@@ -113,6 +143,24 @@ function renderMessage(msgObj) {
                 }
             });
         }
+        if (sender !== myId) {
+            senderP.addEventListener("click", () => {
+                const confirmPrivate = confirm(`Invite ${rawName} to a private chat?`);
+                if (confirmPrivate) {
+                    const roomId = [myId, sender].sort().join("-");
+                    socket.emit("privateInvite", { toId: sender, roomId, fromName: localStorage.getItem('myName') });
+                    window.location.href = `room.html?roomId=${roomId}`;
+                }
+            });
+        }
+
+// Handle receiving a private chat invite with fromName
+socket.on("privateInvite", ({ roomId, fromName }) => {
+    const accept = confirm(`Do you want to chat privately with ${fromName}?`);
+    if (accept) {
+        window.location.href = `room.html?roomId=${roomId}`;
+    }
+});
         displayCont.appendChild(senderP);
         lastSender = sender;
     }
@@ -151,6 +199,23 @@ function renderMessage(msgObj) {
     p.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
+socket.on("chatHistory", (messages) => {
+    // Clear display and reset lastSender at start
+    displayCont.innerHTML = "";
+    lastSender = null;
+    // Optionally, clear previous saved chat history to avoid duplication
+    localStorage.setItem('chatHistory', JSON.stringify([]));
+    messages.forEach(msgObj => {
+        const displayMsg = {
+            ...msgObj,
+            sender: msgObj.senderId,
+            _rawName: msgObj.senderName || null
+        };
+        renderMessage(displayMsg);
+        saveMessage(displayMsg);
+    });
+});
+
 socket.on("msgs", (msgObj) => {
     const { senderId, senderName } = msgObj;
     const displayMsg = {
@@ -160,6 +225,20 @@ socket.on("msgs", (msgObj) => {
     };
     renderMessage(displayMsg);
     saveMessage(displayMsg);
+});
+
+socket.on("privateMsg", (msgObj) => {
+    if (!isPrivateMode) {
+        displayCont.innerHTML = "";
+        isPrivateMode = true;
+        modeHeader.style.display = "block";
+    }
+    const displayMsg = {
+        ...msgObj,
+        sender: msgObj.senderId,
+        _rawName: msgObj.senderName || null
+    };
+    renderMessage(displayMsg); // Or use a separate renderPrivateMessage() if needed
 });
 
 const imgInput = document.getElementById('imgInput');
@@ -174,7 +253,11 @@ sndbtn.addEventListener('click', () => {
         reader.onload = () => {
             const base64 = reader.result;
             const timestamp = Date.now();
-            socket.emit('msg', { content: base64, senderId: myId, senderName: myName, timestamp });
+            if (isPrivateMode && currentRoomId) {
+                socket.emit('privateMsg', { roomId: currentRoomId, msgObj: { content: base64, senderId: myId, senderName: myName, timestamp } });
+            } else {
+                socket.emit('msg', { content: base64, senderId: myId, senderName: myName, timestamp });
+            }
             imgInput.value = ""; // Reset file input
         };
         reader.readAsDataURL(file);
@@ -183,7 +266,11 @@ sndbtn.addEventListener('click', () => {
     // If there's a text message
     if (msgs !== "") {
         const timestamp = Date.now();
-        socket.emit('msg', { content: msgs, senderId: myId, senderName: myName, timestamp });
+        if (isPrivateMode && currentRoomId) {
+            socket.emit('privateMsg', { roomId: currentRoomId, msgObj: { content: msgs, senderId: myId, senderName: myName, timestamp } });
+        } else {
+            socket.emit('msg', { content: msgs, senderId: myId, senderName: myName, timestamp });
+        }
         msg.value = "";
         typeP.classList.remove('typing', 'typing-me', 'typing-other');
         typeP.textContent = "";
