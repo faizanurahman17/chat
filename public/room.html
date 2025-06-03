@@ -40,6 +40,11 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+
+        const myName = localStorage.getItem('myName');
+
+        // Handlers for privateInvite and inviteDeclined moved to main chat page (script.js)
+
         const params = new URLSearchParams(window.location.search);
         const roomId = params.get('roomId');
 
@@ -54,12 +59,39 @@
             e.preventDefault();
             const leave = confirm(`Leaving this private room will delete the chats\n\nROOM: ${roomId}`);
             if (leave) {
+                socket.emit("leavePrivateRoom", { roomId, userName: myName });
                 window.location.href = "index.html";
             }
         });
+        socket.on("userLeftPrivateChat", ({ userName }) => {
+            alert(`${userName} left the private chat.`);
+        });
 
+        const role = params.get('role');
         roomLabel.textContent = `(Room: ${roomId})`;
+
+        if (role !== "receiver") {
+            const waitingMessage = document.createElement("p");
+            waitingMessage.textContent = "Waiting for the other user to join...";
+            waitingMessage.style.textAlign = "center";
+            waitingMessage.style.color = "gray";
+            displayCont.appendChild(waitingMessage);
+
+            let privateReady = false;
+            socket.on("privateReady", ({ confirmed }) => {
+                if (confirmed) {
+                    privateReady = true;
+                    waitingMessage.remove();
+                }
+            });
+        }
+
+        // Join the private room for both sender and receiver
         socket.emit("joinPrivateRoom", { roomId });
+
+        // Join the private room for both sender and receiver
+        socket.emit("privateJoinRequest", { roomId, myName });
+
 
         sndbtn.addEventListener("click", () => {
             const text = msg.value.trim();
@@ -72,7 +104,7 @@
                     const timestamp = Date.now();
                     socket.emit("privateMsg", {
                         roomId,
-                        msgObj: { content: base64, senderId: socket.id, senderName: localStorage.getItem('myName'), timestamp }
+                        msgObj: { content: base64, senderId: socket.id, senderName: myName, timestamp }
                     });
                     imgInput.value = "";
                 };
@@ -83,7 +115,7 @@
                 const timestamp = Date.now();
                 socket.emit("privateMsg", {
                     roomId,
-                    msgObj: { content: text, senderId: socket.id, senderName: localStorage.getItem('myName'), timestamp }
+                    msgObj: { content: text, senderId: socket.id, senderName: myName, timestamp }
                 });
                 msg.value = "";
             }
@@ -121,13 +153,6 @@
             if (e.key === "Enter") {
                 e.preventDefault();
                 sndbtn.click();
-            }
-        });
-
-        socket.on("privateInvite", ({ roomId, fromName }) => {
-            const accept = confirm(`Do you want to chat privately with ${fromName}?`);
-            if (accept) {
-                window.location.href = `room.html?roomId=${roomId}`;
             }
         });
     </script>

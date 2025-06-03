@@ -1,3 +1,5 @@
+// Map userId (client's persistent ID) to socket.id
+const userIdToSocket = {};
 const http = require("http");
 const express = require("express");
 const path = require("path");
@@ -10,11 +12,18 @@ const server = http.createServer(app);
 const io = new Server(server);
 const users = new Set();
 
+const roomWaiters = {};
+
 io.on('connection', (socket) => {
     users.add(socket.id);
     io.emit("online", Array.from(users));
 
     socket.emit("chatHistory", messageHistory);
+
+    // Register client ID mapping
+    socket.on("registerClientId", (clientId) => {
+        userIdToSocket[clientId] = socket.id;
+    });
 
     socket.on('msg', (msgObj) => {
         messageHistory.push(msgObj);
@@ -36,12 +45,51 @@ io.on('connection', (socket) => {
         socket.join(roomId);
     });
 
+    socket.on("privateJoinRequest", ({ roomId, myName }) => {
+        if (!roomWaiters[roomId]) {
+            roomWaiters[roomId] = [{ id: socket.id, name: myName }];
+        } else {
+            roomWaiters[roomId].push({ id: socket.id, name: myName });
+            // Notify both users that the room is ready
+            roomWaiters[roomId].forEach(user => {
+                io.to(user.id).emit("privateReady", { confirmed: true });
+            });
+            delete roomWaiters[roomId];
+        }
+    });
+
     socket.on("privateMsg", ({ roomId, msgObj }) => {
         io.to(roomId).emit("privateMsg", msgObj);
     });
 
-    socket.on("privateInvite", ({ toId, roomId, fromName }) => {
-        io.to(toId).emit("privateInvite", { roomId, fromName });
+    socket.on('privateInvite', ({ toId, roomId, fromName }) => {
+        const actualSocketId = userIdToSocket[toId];
+        console.log("Invite target myId:", toId);
+        console.log("Resolved to socket ID:", actualSocketId);
+        if (actualSocketId) {
+            io.to(actualSocketId).emit('privateInvite', { roomId, fromName, fromId: socket.id });
+        } else {
+            console.log("No socket ID found for clientId:", toId);
+        }
+    });
+
+    socket.on('privateAccept', ({ roomId, fromId }) => {
+        socket.join(roomId);
+        const senderSocket = io.sockets.sockets.get(fromId);
+        if (senderSocket) senderSocket.join(roomId);
+        io.to(roomId).emit("privateChatStarted", { roomId });
+    });
+
+    socket.on('privateDecline', ({ fromId, receiverName }) => {
+        const senderSocket = io.sockets.sockets.get(fromId);
+        if (senderSocket) {
+            senderSocket.emit('inviteDeclined', { receiverName });
+        }
+    });
+
+    socket.on('leavePrivateRoom', ({ roomId, userName }) => {
+        socket.leave(roomId);
+        socket.to(roomId).emit('userLeftPrivateChat', { userName });
     });
 
     socket.on("disconnect", () => {

@@ -1,4 +1,3 @@
-// const socket = io("https://chat-n8s4.onrender.com");
 const socket = io();
 let lastSender = null;
 const senderMap = {};
@@ -25,6 +24,21 @@ const myName = localStorage.getItem('myName') || (() => {
     }
     return name;
 })();
+
+// Handlers for privateInvite and inviteDeclined are placed here so myName is available
+socket.on("privateInvite", ({ roomId, fromName, fromId }) => {
+  const accept = confirm(`Do you want to chat privately with ${fromName}?`);
+  if (accept) {
+    socket.emit("privateAccept", { roomId, fromId });
+    window.location.href = `room.html?roomId=${roomId}&role=receiver`;
+  } else {
+    socket.emit("privateDecline", { fromId, receiverName: myName });
+  }
+});
+
+socket.on("inviteDeclined", ({ receiverName }) => {
+  alert(`${receiverName} declined the private chat invite.`);
+});
 
 const msg = document.getElementById('msg');
 const sndbtn = document.getElementById('sndbtn');
@@ -149,18 +163,10 @@ function renderMessage(msgObj) {
                 if (confirmPrivate) {
                     const roomId = [myId, sender].sort().join("-");
                     socket.emit("privateInvite", { toId: sender, roomId, fromName: localStorage.getItem('myName') });
-                    window.location.href = `room.html?roomId=${roomId}`;
+                    window.location.href = `room.html?roomId=${roomId}&role=sender`;
                 }
             });
         }
-
-// Handle receiving a private chat invite with fromName
-socket.on("privateInvite", ({ roomId, fromName }) => {
-    const accept = confirm(`Do you want to chat privately with ${fromName}?`);
-    if (accept) {
-        window.location.href = `room.html?roomId=${roomId}`;
-    }
-});
         displayCont.appendChild(senderP);
         lastSender = sender;
     }
@@ -329,3 +335,5 @@ socket.on("rename", ({ senderId, newName }) => {
 });
 
 // setInterval(() => location.reload(), 5000);
+// Register this client's persistent ID with the server
+socket.emit("registerClientId", myId);
